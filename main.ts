@@ -14,11 +14,20 @@
 // Outside the grader's container, MAKEFUN_BOT_DIR and MAKEFUN_OUTPUT_DIR stand in for /bot and /output:
 //   mkdir -p out && MAKEFUN_BOT_DIR=. MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { copyFileSync, mkdirSync } from 'node:fs';
+// The house reads out/POST.json, so refuse a malformed one early instead of
+// copying bytes the gate cannot use: POST.json must be a JSON object whose
+// url names the post. A valid post address copies through unchanged.
+import { copyFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const BOT_DIR = process.env.MAKEFUN_BOT_DIR ?? '/bot';
 const OUTPUT_DIR = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
+
+const post = JSON.parse(readFileSync(join(BOT_DIR, 'POST.json'), 'utf8')) as unknown;
+if (typeof post !== 'object' || post === null || typeof (post as { url?: unknown }).url !== 'string') {
+  console.error('POST.json must be a JSON object with a url string');
+  process.exit(1);
+}
 
 mkdirSync(OUTPUT_DIR, { recursive: true });
 try {
